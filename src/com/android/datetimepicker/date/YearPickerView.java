@@ -57,8 +57,8 @@ public class YearPickerView extends ListView implements OnItemClickListener, OnD
                 LayoutParams.WRAP_CONTENT);
         setLayoutParams(frame);
         Resources res = context.getResources();
-        mViewSize = res.getDimensionPixelOffset(R.dimen.date_picker_view_animator_height);
-        mChildSize = res.getDimensionPixelOffset(R.dimen.year_label_height);
+        mViewSize = res.getDimensionPixelOffset(R.dimen.mdtp_date_picker_view_animator_height);
+        mChildSize = res.getDimensionPixelOffset(R.dimen.mdtp_year_label_height);
         setVerticalFadingEdgeEnabled(true);
         setFadingEdgeLength(mChildSize / 3);
         init(context);
@@ -69,11 +69,11 @@ public class YearPickerView extends ListView implements OnItemClickListener, OnD
     }
 
     private void init(Context context) {
-        ArrayList<String> years = new ArrayList<String>();
+        ArrayList<String> years = new ArrayList<>();
         for (int year = mController.getMinYear(); year <= mController.getMaxYear(); year++) {
             years.add(String.format("%d", year));
         }
-        mAdapter = new YearAdapter(context, R.layout.year_label_text_view, years);
+        mAdapter = new YearAdapter(context, R.layout.mdtp_year_label_text_view, years);
         setAdapter(mAdapter);
     }
 
@@ -110,6 +110,7 @@ public class YearPickerView extends ListView implements OnItemClickListener, OnD
         public View getView(int position, View convertView, ViewGroup parent) {
             TextViewWithCircularIndicator v = (TextViewWithCircularIndicator)
                     super.getView(position, convertView, parent);
+            v.setAccentColor(mController.getAccentColor(), mController.isThemeDark());
             v.requestLayout();
             int year = getYearFromTextView(v);
             boolean selected = mController.getSelectedDay().year == year;

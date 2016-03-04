@@ -20,28 +20,29 @@ import android.animation.Keyframe;
 import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
 import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.res.Resources;
+import android.content.res.TypedArray;
+import android.graphics.Color;
 import android.os.Build;
-import android.text.format.Time;
+import android.support.annotation.AttrRes;
+import android.support.v4.content.ContextCompat;
+import android.util.TypedValue;
 import android.view.View;
-
-import java.util.Calendar;
 
 /**
  * Utility helper functions for time and date pickers.
  */
 public class Utils {
 
-    public static final int MONDAY_BEFORE_JULIAN_EPOCH = Time.EPOCH_JULIAN_DAY - 3;
+    //public static final int MONDAY_BEFORE_JULIAN_EPOCH = Time.EPOCH_JULIAN_DAY - 3;
     public static final int PULSE_ANIMATOR_DURATION = 544;
 
     // Alpha level for time picker selection.
-    public static final int SELECTED_ALPHA = 51;
-    public static final int SELECTED_ALPHA_THEME_DARK = 102;
+    public static final int SELECTED_ALPHA = 255;
+    public static final int SELECTED_ALPHA_THEME_DARK = 255;
     // Alpha level for fully opaque.
     public static final int FULL_ALPHA = 255;
-
-
-    static final String SHARED_PREFS_NAME = "com.android.calendar_preferences";
 
     public static boolean isJellybeanOrLater() {
       return Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN;
@@ -58,28 +59,6 @@ public class Utils {
         }
     }
 
-    public static int getDaysInMonth(int month, int year) {
-        switch (month) {
-            case Calendar.JANUARY:
-            case Calendar.MARCH:
-            case Calendar.MAY:
-            case Calendar.JULY:
-            case Calendar.AUGUST:
-            case Calendar.OCTOBER:
-            case Calendar.DECEMBER:
-                return 31;
-            case Calendar.APRIL:
-            case Calendar.JUNE:
-            case Calendar.SEPTEMBER:
-            case Calendar.NOVEMBER:
-                return 30;
-            case Calendar.FEBRUARY:
-                return (year % 4 == 0) ? 29 : 28;
-            default:
-                throw new IllegalArgumentException("Invalid Month");
-        }
-    }
-
     /**
      * Takes a number of weeks since the epoch and calculates the Julian day of
      * the Monday for that week.
@@ -91,9 +70,11 @@ public class Utils {
      * @param week Number of weeks since the epoch
      * @return The julian day for the Monday of the given week since the epoch
      */
+    /**
     public static int getJulianMondayFromWeeksSinceEpoch(int week) {
         return MONDAY_BEFORE_JULIAN_EPOCH + week * 7;
     }
+     */
 
     /**
      * Returns the week since {@link Time#EPOCH_JULIAN_DAY} (Jan 1, 1970)
@@ -108,6 +89,7 @@ public class Utils {
      *          see {@link Time#SUNDAY}
      * @return Weeks since the epoch
      */
+    /**
     public static int getWeeksSinceEpochFromJulianDay(int julianDay, int firstDayOfWeek) {
         int diff = Time.THURSDAY - firstDayOfWeek;
         if (diff < 0) {
@@ -116,6 +98,7 @@ public class Utils {
         int refDay = Time.EPOCH_JULIAN_DAY - diff;
         return (julianDay - refDay) / 7;
     }
+     */
 
     /**
      * Render an animator to pulsate a view in place.
@@ -136,5 +119,68 @@ public class Utils {
         pulseAnimator.setDuration(PULSE_ANIMATOR_DURATION);
 
         return pulseAnimator;
+    }
+
+    /**
+     * Convert Dp to Pixel
+     */
+    @SuppressWarnings("unused")
+    public static int dpToPx(float dp, Resources resources){
+        float px = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, resources.getDisplayMetrics());
+        return (int) px;
+    }
+
+    public static int darkenColor(int color) {
+        float[] hsv = new float[3];
+        Color.colorToHSV(color, hsv);
+        hsv[2] = hsv[2] * 0.8f; // value component
+        return Color.HSVToColor(hsv);
+    }
+
+    /**
+     * Gets the colorAccent from the current context, if possible/available
+     * @param context The context to use as reference for the color
+     * @return the accent color of the current context
+     */
+    public static int getAccentColorFromThemeIfAvailable(Context context) {
+        TypedValue typedValue = new TypedValue();
+        // First, try the android:colorAccent
+        if (Build.VERSION.SDK_INT >= 21) {
+            context.getTheme().resolveAttribute(android.R.attr.colorAccent, typedValue, true);
+            return typedValue.data;
+        }
+        // Next, try colorAccent from support lib
+        int colorAccentResId = context.getResources().getIdentifier("colorAccent", "attr", context.getPackageName());
+        if (colorAccentResId != 0 && context.getTheme().resolveAttribute(colorAccentResId, typedValue, true)) {
+            return typedValue.data;
+        }
+        // Return the value in mdtp_accent_color
+        return ContextCompat.getColor(context, R.color.mdtp_accent_color);
+    }
+
+    /**
+     * Gets dialog type (Light/Dark) from current theme
+     * @param context The context to use as reference for the boolean
+     * @param current Default value to return if cannot resolve the attribute
+     * @return true if dark mode, false if light.
+     */
+    public static boolean isDarkTheme(Context context, boolean current) {
+        return resolveBoolean(context, R.attr.mdtp_theme_dark, current);
+    }
+
+    /**
+     * Gets the required boolean value from the current context, if possible/available
+     * @param context The context to use as reference for the boolean
+     * @param attr Attribute id to resolve
+     * @param fallback Default value to return if no value is specified in theme
+     * @return the boolean value from current theme
+     */
+    private static boolean resolveBoolean(Context context, @AttrRes int attr, boolean fallback) {
+        TypedArray a = context.getTheme().obtainStyledAttributes(new int[]{attr});
+        try {
+            return a.getBoolean(0, fallback);
+        } finally {
+            a.recycle();
+        }
     }
 }

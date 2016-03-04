@@ -18,13 +18,13 @@ package com.android.datetimepicker.date;
 
 import android.content.Context;
 import android.graphics.Canvas;
-
-import java.util.Calendar;
+import android.graphics.Typeface;
+import android.util.AttributeSet;
 
 public class SimpleMonthView extends MonthView {
 
-    public SimpleMonthView(Context context) {
-        super(context);
+    public SimpleMonthView(Context context, AttributeSet attr, DatePickerController controller) {
+        super(context, attr, controller);
     }
 
     @Override
@@ -35,19 +35,26 @@ public class SimpleMonthView extends MonthView {
                     mSelectedCirclePaint);
         }
 
+        if(isHighlighted(year, month, day)) {
+            mMonthNumPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        }
+        else {
+            mMonthNumPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
+        }
+
         // If we have a mindate or maxdate, gray out the day number if it's outside the range.
-        if (isOutOfRange(year, month, day)) {
+        if (mController.isOutOfRange(year, month, day)) {
             mMonthNumPaint.setColor(mDisabledDayTextColor);
-        } else if (mSelectedDay == day && mToday == day) {
-            mMonthNumPaint.setColor(mSelectedNumberColor);
+        }
+        else if (mSelectedDay == day) {
+            mMonthNumPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            mMonthNumPaint.setColor(mSelectedDayTextColor);
         } else if (mHasToday && mToday == day) {
             mMonthNumPaint.setColor(mTodayNumberColor);
         } else {
-            mMonthNumPaint.setColor(mDayTextColor);
+            mMonthNumPaint.setColor(isHighlighted(year, month, day) ? mHighlightedDayTextColor : mDayTextColor);
         }
-        if (mSelectedDay == day) {
-            mMonthNumPaint.setColor(mSelectedNumberColor);
-        }
+
         canvas.drawText(String.format("%d", day), x, y, mMonthNumPaint);
     }
 }

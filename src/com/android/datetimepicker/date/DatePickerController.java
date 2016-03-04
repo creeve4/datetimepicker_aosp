@@ -16,9 +16,6 @@
 
 package com.android.datetimepicker.date;
 
-import com.android.datetimepicker.date.DatePickerDialog.OnDateChangedListener;
-import com.android.datetimepicker.date.MonthAdapter.CalendarDay;
-
 import java.util.Calendar;
 
 /**
@@ -30,11 +27,19 @@ public interface DatePickerController {
 
     void onDayOfMonthSelected(int year, int month, int day);
 
-    void registerOnDateChangedListener(OnDateChangedListener listener);
+    void registerOnDateChangedListener(DatePickerDialog.OnDateChangedListener listener);
 
-    void unregisterOnDateChangedListener(OnDateChangedListener listener);
+    void unregisterOnDateChangedListener(DatePickerDialog.OnDateChangedListener listener);
 
-    CalendarDay getSelectedDay();
+    MonthAdapter.CalendarDay getSelectedDay();
+
+    boolean isThemeDark();
+
+    int getAccentColor();
+    
+    Calendar[] getHighlightedDays();
+
+    Calendar[] getSelectableDays();
 
     int getFirstDayOfWeek();
 
@@ -42,9 +47,7 @@ public interface DatePickerController {
 
     int getMaxYear();
 
-    Calendar getMinDate();
-
-    Calendar getMaxDate();
+    boolean isOutOfRange(int year, int month, int day);
 
     void tryVibrate();
 }

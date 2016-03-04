@@ -24,13 +24,15 @@ import android.graphics.Paint.Align;
 import android.graphics.Paint.Style;
 import android.graphics.Rect;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.view.accessibility.AccessibilityNodeInfoCompat;
 import android.support.v4.widget.ExploreByTouchHelper;
 import android.text.format.DateFormat;
 import android.text.format.DateUtils;
-import android.text.format.Time;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -38,10 +40,10 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 import com.android.datetimepicker.R;
-import com.android.datetimepicker.Utils;
 import com.android.datetimepicker.date.MonthAdapter.CalendarDay;
 
 import java.security.InvalidParameterException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Formatter;
 import java.util.HashMap;
@@ -65,23 +67,21 @@ public abstract class MonthView extends View {
      */
     public static final String VIEW_PARAMS_HEIGHT = "height";
     /**
-     * This specifies the position (or weeks since the epoch) of this week,
-     * calculated using {@link Utils#getWeeksSinceEpochFromJulianDay}
+     * This specifies the position (or weeks since the epoch) of this week.
      */
     public static final String VIEW_PARAMS_MONTH = "month";
     /**
-     * This specifies the position (or weeks since the epoch) of this week,
-     * calculated using {@link Utils#getWeeksSinceEpochFromJulianDay}
+     * This specifies the position (or weeks since the epoch) of this week.
      */
     public static final String VIEW_PARAMS_YEAR = "year";
     /**
-     * This sets one of the days in this view as selected {@link Time#SUNDAY}
-     * through {@link Time#SATURDAY}.
+     * This sets one of the days in this view as selected {@link Calendar#SUNDAY}
+     * through {@link Calendar#SATURDAY}.
      */
     public static final String VIEW_PARAMS_SELECTED_DAY = "selected_day";
     /**
-     * Which day the week should start on. {@link Time#SUNDAY} through
-     * {@link Time#SATURDAY}.
+     * Which day the week should start on. {@link Calendar#SUNDAY} through
+     * {@link Calendar#SATURDAY}.
      */
     public static final String VIEW_PARAMS_WEEK_START = "week_start";
     /**
@@ -90,7 +90,7 @@ public abstract class MonthView extends View {
      */
     public static final String VIEW_PARAMS_NUM_DAYS = "num_days";
     /**
-     * Which month is currently in focus, as defined by {@link Time#month}
+     * Which month is currently in focus, as defined by {@link Calendar#MONTH}
      * [0-11].
      */
     public static final String VIEW_PARAMS_FOCUS_MONTH = "focus_month";
@@ -131,7 +131,6 @@ public abstract class MonthView extends View {
 
     protected Paint mMonthNumPaint;
     protected Paint mMonthTitlePaint;
-    protected Paint mMonthTitleBGPaint;
     protected Paint mSelectedCirclePaint;
     protected Paint mMonthDayLabelPaint;
 
@@ -182,44 +181,56 @@ public abstract class MonthView extends View {
     private boolean mLockAccessibilityDelegate;
 
     protected int mDayTextColor;
+    protected int mSelectedDayTextColor;
+    protected int mMonthDayTextColor;
     protected int mTodayNumberColor;
-    protected int mSelectedNumberColor;
+    protected int mHighlightedDayTextColor;
     protected int mDisabledDayTextColor;
     protected int mMonthTitleColor;
-    protected int mMonthTitleBGColor;
 
     public MonthView(Context context) {
-        this(context, null);
+        this(context, null, null);
     }
 
-    public MonthView(Context context, AttributeSet attr) {
+    public MonthView(Context context, AttributeSet attr, DatePickerController controller) {
         super(context, attr);
+        mController = controller;
         Resources res = context.getResources();
 
         mDayLabelCalendar = Calendar.getInstance();
         mCalendar = Calendar.getInstance();
 
-        mDayOfWeekTypeface = res.getString(R.string.day_of_week_label_typeface);
-        mMonthTitleTypeface = res.getString(R.string.sans_serif);
+        mDayOfWeekTypeface = res.getString(R.string.mdtp_day_of_week_label_typeface);
+        mMonthTitleTypeface = res.getString(R.string.mdtp_sans_serif);
 
-        mDayTextColor = res.getColor(R.color.date_picker_text_normal);
-        mTodayNumberColor = res.getColor(R.color.blue);
-        mSelectedNumberColor = res.getColor(android.R.color.white);
-        mDisabledDayTextColor = res.getColor(R.color.date_picker_text_disabled);
-        mMonthTitleColor = res.getColor(android.R.color.white);
-        mMonthTitleBGColor = res.getColor(R.color.circle_background);
+        boolean darkTheme = mController != null && mController.isThemeDark();
+        if(darkTheme) {
+            mDayTextColor = ContextCompat.getColor(context, R.color.mdtp_date_picker_text_normal_dark_theme);
+            mMonthDayTextColor = ContextCompat.getColor(context, R.color.mdtp_date_picker_month_day_dark_theme);
+            mDisabledDayTextColor = ContextCompat.getColor(context, R.color.mdtp_date_picker_text_disabled_dark_theme);
+            mHighlightedDayTextColor = ContextCompat.getColor(context, R.color.mdtp_date_picker_text_highlighted_dark_theme);
+        }
+        else {
+            mDayTextColor = ContextCompat.getColor(context, R.color.mdtp_date_picker_text_normal);
+            mMonthDayTextColor = ContextCompat.getColor(context, R.color.mdtp_date_picker_month_day);
+            mDisabledDayTextColor = ContextCompat.getColor(context, R.color.mdtp_date_picker_text_disabled);
+            mHighlightedDayTextColor = ContextCompat.getColor(context, R.color.mdtp_date_picker_text_highlighted);
+        }
+        mSelectedDayTextColor = ContextCompat.getColor(context, R.color.mdtp_white);
+        mTodayNumberColor = mController.getAccentColor();
+        mMonthTitleColor = ContextCompat.getColor(context, R.color.mdtp_white);
 
         mStringBuilder = new StringBuilder(50);
         mFormatter = new Formatter(mStringBuilder, Locale.getDefault());
 
-        MINI_DAY_NUMBER_TEXT_SIZE = res.getDimensionPixelSize(R.dimen.day_number_size);
-        MONTH_LABEL_TEXT_SIZE = res.getDimensionPixelSize(R.dimen.month_label_size);
-        MONTH_DAY_LABEL_TEXT_SIZE = res.getDimensionPixelSize(R.dimen.month_day_label_text_size);
-        MONTH_HEADER_SIZE = res.getDimensionPixelOffset(R.dimen.month_list_item_header_height);
+        MINI_DAY_NUMBER_TEXT_SIZE = res.getDimensionPixelSize(R.dimen.mdtp_day_number_size);
+        MONTH_LABEL_TEXT_SIZE = res.getDimensionPixelSize(R.dimen.mdtp_month_label_size);
+        MONTH_DAY_LABEL_TEXT_SIZE = res.getDimensionPixelSize(R.dimen.mdtp_month_day_label_text_size);
+        MONTH_HEADER_SIZE = res.getDimensionPixelOffset(R.dimen.mdtp_month_list_item_header_height);
         DAY_SELECTED_CIRCLE_SIZE = res
-                .getDimensionPixelSize(R.dimen.day_number_select_circle_radius);
+                .getDimensionPixelSize(R.dimen.mdtp_day_number_select_circle_radius);
 
-        mRowHeight = (res.getDimensionPixelOffset(R.dimen.date_picker_view_animator_height)
+        mRowHeight = (res.getDimensionPixelOffset(R.dimen.mdtp_date_picker_view_animator_height)
                 - getMonthHeaderSize()) / MAX_NUM_ROWS;
 
         // Set up accessibility components.
@@ -254,7 +265,7 @@ public abstract class MonthView extends View {
     }
 
     @Override
-    public boolean dispatchHoverEvent(MotionEvent event) {
+    public boolean dispatchHoverEvent(@NonNull MotionEvent event) {
         // First right-of-refusal goes the touch exploration helper.
         if (mTouchHelper.dispatchHoverEvent(event)) {
             return true;
@@ -263,7 +274,7 @@ public abstract class MonthView extends View {
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
+    public boolean onTouchEvent(@NonNull MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_UP:
                 final int day = getDayFromLocation(event.getX(), event.getY());
@@ -289,13 +300,6 @@ public abstract class MonthView extends View {
         mMonthTitlePaint.setTextAlign(Align.CENTER);
         mMonthTitlePaint.setStyle(Style.FILL);
 
-        mMonthTitleBGPaint = new Paint();
-        mMonthTitleBGPaint.setFakeBoldText(true);
-        mMonthTitleBGPaint.setAntiAlias(true);
-        mMonthTitleBGPaint.setColor(mMonthTitleBGColor);
-        mMonthTitleBGPaint.setTextAlign(Align.CENTER);
-        mMonthTitleBGPaint.setStyle(Style.FILL);
-
         mSelectedCirclePaint = new Paint();
         mSelectedCirclePaint.setFakeBoldText(true);
         mSelectedCirclePaint.setAntiAlias(true);
@@ -307,7 +311,7 @@ public abstract class MonthView extends View {
         mMonthDayLabelPaint = new Paint();
         mMonthDayLabelPaint.setAntiAlias(true);
         mMonthDayLabelPaint.setTextSize(MONTH_DAY_LABEL_TEXT_SIZE);
-        mMonthDayLabelPaint.setColor(mDayTextColor);
+        mMonthDayLabelPaint.setColor(mMonthDayTextColor);
         mMonthDayLabelPaint.setTypeface(Typeface.create(mDayOfWeekTypeface, Typeface.NORMAL));
         mMonthDayLabelPaint.setStyle(Style.FILL);
         mMonthDayLabelPaint.setTextAlign(Align.CENTER);
@@ -361,8 +365,9 @@ public abstract class MonthView extends View {
         mYear = params.get(VIEW_PARAMS_YEAR);
 
         // Figure out what day today is
-        final Time today = new Time(Time.getCurrentTimezone());
-        today.setToNow();
+        //final Time today = new Time(Time.getCurrentTimezone());
+        //today.setToNow();
+        final Calendar today = Calendar.getInstance();
         mHasToday = false;
         mToday = -1;
 
@@ -377,7 +382,7 @@ public abstract class MonthView extends View {
             mWeekStart = mCalendar.getFirstDayOfWeek();
         }
 
-        mNumCells = Utils.getDaysInMonth(mMonth, mYear);
+        mNumCells = mCalendar.getActualMaximum(Calendar.DAY_OF_MONTH);
         for (int i = 0; i < mNumCells; i++) {
             final int day = i + 1;
             if (sameDay(day, today)) {
@@ -407,16 +412,16 @@ public abstract class MonthView extends View {
         return (dividend + (remainder > 0 ? 1 : 0));
     }
 
-    private boolean sameDay(int day, Time today) {
-        return mYear == today.year &&
-                mMonth == today.month &&
-                day == today.monthDay;
+    private boolean sameDay(int day, Calendar today) {
+        return mYear == today.get(Calendar.YEAR) &&
+                mMonth == today.get(Calendar.MONTH) &&
+                day == today.get(Calendar.DAY_OF_MONTH);
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), mRowHeight * mNumRows
-                + getMonthHeaderSize());
+                + getMonthHeaderSize() + 5);
     }
 
     @Override
@@ -447,13 +452,12 @@ public abstract class MonthView extends View {
                 | DateUtils.FORMAT_NO_MONTH_DAY;
         mStringBuilder.setLength(0);
         long millis = mCalendar.getTimeInMillis();
-        return DateUtils.formatDateRange(getContext(), mFormatter, millis, millis, flags,
-                Time.getCurrentTimezone()).toString();
+        return DateUtils.formatDateRange(getContext(), mFormatter, millis, millis, flags, null).toString();
     }
 
     protected void drawMonthTitle(Canvas canvas) {
         int x = (mWidth + 2 * mEdgePadding) / 2;
-        int y = (getMonthHeaderSize() - MONTH_DAY_LABEL_TEXT_SIZE) / 2 + (MONTH_LABEL_TEXT_SIZE / 3);
+        int y = (getMonthHeaderSize() - MONTH_DAY_LABEL_TEXT_SIZE) / 2;
         canvas.drawText(getMonthAndYearString(), x, y, mMonthTitlePaint);
     }
 
@@ -462,12 +466,12 @@ public abstract class MonthView extends View {
         int dayWidthHalf = (mWidth - mEdgePadding * 2) / (mNumDays * 2);
 
         for (int i = 0; i < mNumDays; i++) {
-            int calendarDay = (i + mWeekStart) % mNumDays;
             int x = (2 * i + 1) * dayWidthHalf + mEdgePadding;
+
+            int calendarDay = (i + mWeekStart) % mNumDays;
             mDayLabelCalendar.set(Calendar.DAY_OF_WEEK, calendarDay);
-            canvas.drawText(mDayLabelCalendar.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.SHORT,
-                    Locale.getDefault()).toUpperCase(Locale.getDefault()), x, y,
-                    mMonthDayLabelPaint);
+            String weekString = getWeekDayLabel(mDayLabelCalendar);
+            canvas.drawText(weekString, x, y, mMonthDayLabelPaint);
         }
     }
 
@@ -571,7 +575,7 @@ public abstract class MonthView extends View {
      */
     private void onDayClick(int day) {
         // If the min / max date are set, only process the click if it's a valid selection.
-        if (isOutOfRange(mYear, mMonth, day)) {
+        if (mController.isOutOfRange(mYear, mMonth, day)) {
             return;
         }
 
@@ -585,74 +589,70 @@ public abstract class MonthView extends View {
     }
 
     /**
-     * @return true if the specified year/month/day are within the range set by minDate and maxDate.
-     * If one or either have not been set, they are considered as Integer.MIN_VALUE and
-     * Integer.MAX_VALUE.
+     * @param year
+     * @param month
+     * @param day
+     * @return true if the given date should be highlighted
      */
-    protected boolean isOutOfRange(int year, int month, int day) {
-        if (isBeforeMin(year, month, day)) {
-            return true;
-        } else if (isAfterMax(year, month, day)) {
+    protected boolean isHighlighted(int year, int month, int day) {
+        Calendar[] highlightedDays = mController.getHighlightedDays();
+        if(highlightedDays == null) return false;
+        for (Calendar c : highlightedDays) {
+            if(year < c.get(Calendar.YEAR)) break;
+            if(year > c.get(Calendar.YEAR)) continue;
+            if(month < c.get(Calendar.MONTH)) break;
+            if(month > c.get(Calendar.MONTH)) continue;
+            if(day < c.get(Calendar.DAY_OF_MONTH)) break;
+            if(day > c.get(Calendar.DAY_OF_MONTH)) continue;
             return true;
         }
-
         return false;
     }
 
-    private boolean isBeforeMin(int year, int month, int day) {
-        if (mController == null) {
-            return false;
-        }
-        Calendar minDate = mController.getMinDate();
-        if (minDate == null) {
-            return false;
-        }
+    /**
+     * Return a 1 or 2 letter String for use as a weekday label
+     * @param day The day for which to generate a label
+     * @return The weekday label
+     */
+    private String getWeekDayLabel(Calendar day) {
+        Locale locale = Locale.getDefault();
 
-        if (year < minDate.get(Calendar.YEAR)) {
-            return true;
-        } else if (year > minDate.get(Calendar.YEAR)) {
-            return false;
-        }
+        // Localised short version of the string is not available on API < 18
+        if(Build.VERSION.SDK_INT < 18) {
+            String dayName = new SimpleDateFormat("E", locale).format(day.getTime());
+            String dayLabel = dayName.toUpperCase(locale).substring(0, 1);
 
-        if (month < minDate.get(Calendar.MONTH)) {
-            return true;
-        } else if (month > minDate.get(Calendar.MONTH)) {
-            return false;
-        }
+            // Chinese labels should be fetched right to left
+            if (locale.equals(Locale.CHINA) || locale.equals(Locale.CHINESE) || locale.equals(Locale.SIMPLIFIED_CHINESE) || locale.equals(Locale.TRADITIONAL_CHINESE)) {
+                int len = dayName.length();
+                dayLabel = dayName.substring(len -1, len);
+            }
 
-        if (day < minDate.get(Calendar.DAY_OF_MONTH)) {
-            return true;
-        } else {
-            return false;
-        }
-    }
+            // Most hebrew labels should select the second to last character
+            if (locale.getLanguage().equals("he") || locale.getLanguage().equals("iw")) {
+                if(mDayLabelCalendar.get(Calendar.DAY_OF_WEEK) != Calendar.SATURDAY) {
+                    int len = dayName.length();
+                    dayLabel = dayName.substring(len - 2, len - 1);
+                }
+                else {
+                    // I know this is duplication, but it makes the code easier to grok by
+                    // having all hebrew code in the same block
+                    dayLabel = dayName.toUpperCase(locale).substring(0, 1);
+                }
+            }
 
-    private boolean isAfterMax(int year, int month, int day) {
-        if (mController == null) {
-            return false;
-        }
-        Calendar maxDate = mController.getMaxDate();
-        if (maxDate == null) {
-            return false;
-        }
+            // Catalan labels should be two digits in lowercase
+            if (locale.getLanguage().equals("ca"))
+                dayLabel = dayName.toLowerCase().substring(0,2);
 
-        if (year > maxDate.get(Calendar.YEAR)) {
-            return true;
-        } else if (year < maxDate.get(Calendar.YEAR)) {
-            return false;
-        }
+            // Correct single character label in Spanish is X
+            if (locale.getLanguage().equals("es") && day.get(Calendar.DAY_OF_WEEK) == Calendar.WEDNESDAY)
+                dayLabel = "X";
 
-        if (month > maxDate.get(Calendar.MONTH)) {
-            return true;
-        } else if (month < maxDate.get(Calendar.MONTH)) {
-            return false;
+            return dayLabel;
         }
-
-        if (day > maxDate.get(Calendar.DAY_OF_MONTH)) {
-            return true;
-        } else {
-            return false;
-        }
+        // Getting the short label is a one liner on API >= 18
+        return new SimpleDateFormat("EEEEE", locale).format(day.getTime());
     }
 
     /**
@@ -801,7 +801,7 @@ public abstract class MonthView extends View {
                     mTempCalendar.getTimeInMillis());
 
             if (day == mSelectedDay) {
-                return getContext().getString(R.string.item_is_selected, date);
+                return getContext().getString(R.string.mdtp_item_is_selected, date);
             }
 
             return date;
@@ -812,6 +812,6 @@ public abstract class MonthView extends View {
      * Handles callbacks when the user clicks on a time object.
      */
     public interface OnDayClickListener {
-        public void onDayClick(MonthView view, CalendarDay day);
+        void onDayClick(MonthView view, CalendarDay day);
     }
 }
