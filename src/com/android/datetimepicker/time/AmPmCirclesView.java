@@ -168,7 +168,7 @@ public class AmPmCirclesView extends View {
                     (int) (Math.min(layoutXCenter, layoutYCenter) * mCircleRadiusMultiplier);
             mAmPmCircleRadius = (int) (circleRadius * mAmPmCircleRadiusMultiplier);
             layoutYCenter += mAmPmCircleRadius*0.75;
-            int textSize = mAmPmCircleRadius * 3 / 4;
+            int textSize = mAmPmCircleRadius * 11 / 16;
             mPaint.setTextSize(textSize);
 
             // Line up the vertical center of the AM/PM circles with the bottom of the main circle.
