@@ -28,7 +28,7 @@
 
     <color name="mdtp_transparent_black">#7f000000</color>
     <color name="mdtp_accent_color">#4CAF50</color>
-    <color name="mdtp_accent_color_focused">#76ffffff</color>
+    <color name="mdtp_accent_color_focused">#C0ffffff</color>
     <color name="mdtp_neutral_pressed">#33999999</color>
     <color name="mdtp_accent_color_dark">#2E7D32</color>
     <color name="mdtp_date_picker_text_normal">#ff212121</color>

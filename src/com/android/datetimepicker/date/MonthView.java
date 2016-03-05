@@ -652,7 +652,7 @@ public abstract class MonthView extends View {
             return dayLabel;
         }
         // Getting the short label is a one liner on API >= 18
-        return new SimpleDateFormat("EEEEE", locale).format(day.getTime());
+        return new SimpleDateFormat("EEE", locale).format(day.getTime());
     }
 
     /**

@@ -50,7 +50,7 @@ public abstract class DayPickerView extends ListView implements OnScrollListener
     // Affects when the month selection will change while scrolling up
     protected static final int SCROLL_HYST_WEEKS = 2;
     // How long the GoTo fling animation should last
-    protected static final int GOTO_SCROLL_DURATION = 250;
+    protected static final int GOTO_SCROLL_DURATION = 50;
     // How long to wait after receiving an onScrollStateChanged notification
     // before acting on it
     protected static final int SCROLL_CHANGE_DELAY = 40;
